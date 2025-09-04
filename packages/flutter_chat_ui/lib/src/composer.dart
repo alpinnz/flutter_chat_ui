@@ -81,6 +81,8 @@ class Composer extends StatefulWidget {
   /// Placeholder text for the input field.
   final String? hintText;
 
+  final BoxBorder? border;
+
   /// Appearance of the keyboard.
   final Brightness? keyboardAppearance;
 
@@ -143,6 +145,7 @@ class Composer extends StatefulWidget {
     this.left = 0,
     this.right = 0,
     this.top,
+    this.border,
     this.bottom = 0,
     this.sigmaX = 20,
     this.sigmaY = 20,
@@ -150,10 +153,7 @@ class Composer extends StatefulWidget {
     this.attachmentIcon = const Icon(Icons.attachment),
     this.sendIcon = const Icon(Icons.send),
     this.gap = 8,
-    this.inputBorder = const OutlineInputBorder(
-      borderSide: BorderSide.none,
-      borderRadius: BorderRadius.all(Radius.circular(24)),
-    ),
+    this.inputBorder = const OutlineInputBorder(borderSide: BorderSide.none, borderRadius: BorderRadius.all(Radius.circular(24))),
     this.filled = true,
     this.topWidget,
     this.handleSafeArea = true,
@@ -205,9 +205,7 @@ class _ComposerState extends State<Composer> {
 
   KeyEventResult _handleKeyEvent(FocusNode node, KeyEvent event) {
     // Check for Shift+Enter
-    if (event is KeyDownEvent &&
-        event.logicalKey == LogicalKeyboardKey.enter &&
-        HardwareKeyboard.instance.isShiftPressed) {
+    if (event is KeyDownEvent && event.logicalKey == LogicalKeyboardKey.enter && HardwareKeyboard.instance.isShiftPressed) {
       _handleSubmitted(_textController.text);
       return KeyEventResult.handled;
     }
@@ -242,10 +240,7 @@ class _ComposerState extends State<Composer> {
 
   @override
   Widget build(BuildContext context) {
-    final bottomSafeArea =
-        widget.handleSafeArea == true
-            ? MediaQuery.of(context).padding.bottom
-            : 0.0;
+    final bottomSafeArea = widget.handleSafeArea == true ? MediaQuery.of(context).padding.bottom : 0.0;
     final onAttachmentTap = context.read<OnAttachmentTapCallback?>();
     final theme = context.select(
       (ChatTheme t) => (
@@ -263,32 +258,22 @@ class _ComposerState extends State<Composer> {
 
     final content = Container(
       key: _key,
-      color:
-          widget.backgroundColor ??
-          (shouldUseBackdropFilter
-              ? theme.surfaceContainerLow.withValues(alpha: 0.8)
-              : theme.surfaceContainerLow),
+      decoration: BoxDecoration(
+        border: widget.border,
+        color: widget.backgroundColor ?? (shouldUseBackdropFilter ? theme.surfaceContainerLow.withValues(alpha: 0.8) : theme.surfaceContainerLow),
+      ),
       child: Column(
         children: [
           if (widget.topWidget != null) widget.topWidget!,
           Padding(
             padding:
                 widget.handleSafeArea == true
-                    ? (widget.padding?.add(
-                          EdgeInsets.only(bottom: bottomSafeArea),
-                        ) ??
-                        EdgeInsets.only(bottom: bottomSafeArea))
+                    ? (widget.padding?.add(EdgeInsets.only(bottom: bottomSafeArea)) ?? EdgeInsets.only(bottom: bottomSafeArea))
                     : (widget.padding ?? EdgeInsets.zero),
             child: Row(
               children: [
                 widget.attachmentIcon != null && onAttachmentTap != null
-                    ? IconButton(
-                      icon: widget.attachmentIcon!,
-                      color:
-                          widget.attachmentIconColor ??
-                          theme.onSurface.withValues(alpha: 0.5),
-                      onPressed: onAttachmentTap,
-                    )
+                    ? InkWell(onTap: onAttachmentTap, child: widget.attachmentIcon!)
                     : const SizedBox.shrink(),
                 SizedBox(width: widget.gap),
                 Expanded(
@@ -296,21 +281,18 @@ class _ComposerState extends State<Composer> {
                     controller: _textController,
                     decoration: InputDecoration(
                       hintText: widget.hintText,
-                      hintStyle: theme.bodyMedium.copyWith(
-                        color:
-                            widget.hintColor ??
-                            theme.onSurface.withValues(alpha: 0.5),
-                      ),
+                      hintStyle: theme.bodyMedium.copyWith(color: widget.hintColor ?? theme.onSurface.withValues(alpha: 0.5)),
                       border: widget.inputBorder,
+                      enabledBorder: widget.inputBorder,
+                      focusedBorder: widget.inputBorder,
+                      errorBorder: widget.inputBorder,
+                      disabledBorder: widget.inputBorder,
+                      focusedErrorBorder: widget.inputBorder,
                       filled: widget.filled,
-                      fillColor:
-                          widget.inputFillColor ??
-                          theme.surfaceContainerHigh.withValues(alpha: 0.8),
+                      fillColor: widget.inputFillColor ?? theme.surfaceContainerHigh.withValues(alpha: 0.8),
                       hoverColor: Colors.transparent,
                     ),
-                    style: theme.bodyMedium.copyWith(
-                      color: widget.textColor ?? theme.onSurface,
-                    ),
+                    style: theme.bodyMedium.copyWith(color: widget.textColor ?? theme.onSurface),
                     onSubmitted: _handleSubmitted,
                     onChanged: (value) {
                       _hasTextNotifier.value = value.trim().isNotEmpty;
@@ -332,32 +314,20 @@ class _ComposerState extends State<Composer> {
                   ValueListenableBuilder<bool>(
                     valueListenable: _hasTextNotifier,
                     builder: (context, hasText, child) {
-                      if (widget.sendButtonVisibilityMode ==
-                              SendButtonVisibilityMode.hidden &&
-                          !hasText) {
+                      if (widget.sendButtonVisibilityMode == SendButtonVisibilityMode.hidden && !hasText) {
                         return const SizedBox.shrink();
                       }
 
-                      final isActive =
-                          (hasText ||
-                              widget.sendButtonVisibilityMode ==
-                                  SendButtonVisibilityMode.always) &&
-                          !widget.sendButtonDisabled;
+                      final isActive = (hasText || widget.sendButtonVisibilityMode == SendButtonVisibilityMode.always) && !widget.sendButtonDisabled;
 
                       return IconButton(
                         icon: widget.sendIcon!,
                         color:
                             isActive
-                                ? (widget.sendIconColor ??
-                                    theme.onSurface.withValues(alpha: 0.5))
-                                : (widget.emptyFieldSendIconColor ??
-                                    widget.sendIconColor ??
-                                    theme.onSurface.withValues(alpha: 0.5)),
+                                ? (widget.sendIconColor ?? theme.onSurface.withValues(alpha: 0.5))
+                                : (widget.emptyFieldSendIconColor ?? widget.sendIconColor ?? theme.onSurface.withValues(alpha: 0.5)),
                         onPressed:
-                            (widget.sendButtonVisibilityMode ==
-                                            SendButtonVisibilityMode.disabled &&
-                                        !hasText) ||
-                                    widget.sendButtonDisabled
+                            (widget.sendButtonVisibilityMode == SendButtonVisibilityMode.disabled && !hasText) || widget.sendButtonDisabled
                                 ? null
                                 : () => _handleSubmitted(_textController.text),
                       );
@@ -377,15 +347,7 @@ class _ComposerState extends State<Composer> {
       right: widget.right,
       top: widget.top,
       bottom: widget.bottom,
-      child: ClipRect(
-        child:
-            shouldUseBackdropFilter
-                ? BackdropFilter(
-                  filter: ImageFilter.blur(sigmaX: sigmaX, sigmaY: sigmaY),
-                  child: content,
-                )
-                : content,
-      ),
+      child: ClipRect(child: shouldUseBackdropFilter ? BackdropFilter(filter: ImageFilter.blur(sigmaX: sigmaX, sigmaY: sigmaY), child: content) : content),
     );
   }
 
